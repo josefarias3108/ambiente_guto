@@ -1,0 +1,23 @@
+# === SECRETS E CREDENCIAIS — NUNCA COMMITAR ===
+.env
+vps_deployment_blueprint.md
+prd.md
+*.pem
+*.key
+*_deploy_key
+*_deploy_key.pub
+
+# === LOGS ===
+*.log
+logs/
+
+# === PYTHON ===
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# === SISTEMA ===
+.DS_Store
+Thumbs.db

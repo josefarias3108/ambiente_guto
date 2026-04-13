@@ -1,0 +1,110 @@
+version: "3.9"
+
+# ============================================================
+# STACK DE MONITORAMENTO — Espaço Guto
+# Diretório: /monitoring_Guto/docker-compose.yml
+# ============================================================
+# PORTAS USADAS:
+#   Grafana       → 3000
+#   Prometheus    → 9090
+#   node_exporter → 9100
+#   cAdvisor      → 9200
+# ============================================================
+
+services:
+
+  # --- Prometheus (coleta de métricas) ---
+  prometheus:
+    container_name: guto_prometheus
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - guto_prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+    networks:
+      - guto_monitoring_net
+    labels:
+      - "guto.stack=monitoring"
+
+  # --- Grafana (dashboards) ---
+  grafana:
+    container_name: guto_grafana
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-changeme}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-clock-panel
+    volumes:
+      - guto_grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - guto_monitoring_net
+    depends_on:
+      - prometheus
+    labels:
+      - "guto.stack=monitoring"
+
+  # --- node_exporter (métricas da VPS) ---
+  node_exporter:
+    container_name: guto_node_exporter
+    image: prom/node-exporter:latest
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.rootfs=/rootfs"
+      - "--path.sysfs=/host/sys"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+    networks:
+      - guto_monitoring_net
+    labels:
+      - "guto.stack=monitoring"
+
+  # --- cAdvisor (métricas de containers Docker) ---
+  cadvisor:
+    container_name: guto_cadvisor
+    image: gcr.io/cadvisor/cadvisor:latest
+    restart: unless-stopped
+    ports:
+      - "9200:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+    devices:
+      - /dev/kmsg
+    networks:
+      - guto_monitoring_net
+    labels:
+      - "guto.stack=monitoring"
+
+networks:
+  guto_monitoring_net:
+    name: guto_monitoring_net
+    driver: bridge
+
+volumes:
+  guto_prometheus_data:
+    name: guto_prometheus_data
+  guto_grafana_data:
+    name: guto_grafana_data

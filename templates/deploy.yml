@@ -1,0 +1,94 @@
+# ============================================================
+# TEMPLATE: GitHub Actions — Deploy SSH Reutilizável
+# ============================================================
+# INSTRUÇÃO: Copie este arquivo para cada repositório em:
+#   .github/workflows/deploy.yml
+#
+# Configure os seguintes GitHub Secrets no repositório:
+#   VPS_HOST      → IP da VPS (ex: 194.147.58.xxx)
+#   VPS_USER      → Usuário SSH (ex: guto)
+#   VPS_SSH_KEY   → Chave privada RSA (gerada com ssh-keygen)
+#   VPS_PORT      → Porta SSH (normalmente 22)
+#   APP_PORT      → Porta da aplicação (ex: 8001)
+# ============================================================
+
+name: 🚀 Deploy — Guto VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy para VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📋 Checkout do código
+        uses: actions/checkout@v4
+
+      - name: 🔍 Verificar estrutura
+        run: |
+          echo "📁 Repositório: ${{ github.repository }}"
+          echo "🌿 Branch: ${{ github.ref_name }}"
+          echo "🔖 Commit: ${{ github.sha }}"
+
+      - name: 🚀 Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          timeout: 60s
+          script_stop: true
+          script: |
+            set -e
+
+            REPO_NAME="${{ github.event.repository.name }}"
+            APP_DIR="/apps/Guto/${REPO_NAME}"
+
+            echo "========================================"
+            echo "🚀 INICIANDO DEPLOY: ${REPO_NAME}"
+            echo "📅 $(date '+%Y-%m-%d %H:%M:%S')"
+            echo "========================================"
+
+            # 1. Verificar se o diretório existe
+            if [ ! -d "${APP_DIR}" ]; then
+              echo "❌ Diretório ${APP_DIR} não encontrado na VPS!"
+              echo "👉 Execute o setup_new_project.sh primeiro."
+              exit 1
+            fi
+
+            cd "${APP_DIR}"
+            echo "📂 Diretório de trabalho: $(pwd)"
+
+            # 2. Atualizar código
+            echo "📥 Puxando código do GitHub..."
+            git fetch origin
+            git reset --hard origin/main
+
+            # 3. Verificar se .env existe
+            if [ ! -f ".env" ]; then
+              echo "⚠️  Arquivo .env não encontrado! Crie-o manualmente na VPS."
+              exit 1
+            fi
+
+            # 4. Rebuild e restart dos containers
+            echo "🐳 Reconstruindo containers..."
+            docker compose down --remove-orphans
+            docker compose up -d --build
+
+            # 5. Verificar containers rodando
+            echo "🔎 Status dos containers:"
+            docker compose ps
+
+            # 6. Limpar imagens antigas
+            docker image prune -f
+
+            echo "========================================"
+            echo "✅ DEPLOY CONCLUÍDO: ${REPO_NAME}"
+            echo "📅 $(date '+%Y-%m-%d %H:%M:%S')"
+            echo "========================================"

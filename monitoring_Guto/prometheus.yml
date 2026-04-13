@@ -1,0 +1,81 @@
+# ============================================================
+# prometheus.yml — Espaço Guto
+# Diretório: /monitoring_Guto/prometheus.yml
+# ============================================================
+# Monitora:
+#   - VPS via node_exporter (porta 9100)
+#   - Containers Docker via cAdvisor (porta 9200)
+# NÃO interfere em projetos de outros usuários.
+# ============================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+  external_labels:
+    monitor: "guto-monitor"
+    environment: "production"
+
+# Alertas (opcional — adicione alertmanager futuramente)
+alerting:
+  alertmanagers: []
+
+# Regras de alerta (criar arquivos .yml em /monitoring_Guto/rules/ quando necessário)
+rule_files: []
+
+scrape_configs:
+
+  # === PROMETHEUS SELF-MONITORING ===
+  - job_name: "guto_prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+        labels:
+          service: "prometheus"
+          owner: "guto"
+
+  # === VPS — node_exporter (CPU, RAM, Disco, Rede) ===
+  - job_name: "guto_node_exporter"
+    static_configs:
+      - targets: ["node_exporter:9100"]
+        labels:
+          service: "node_exporter"
+          host: "vps_contabo"
+          owner: "guto"
+
+  # === CONTAINERS DOCKER — cAdvisor ===
+  # Monitora TODOS os containers, mas o Grafana permite filtrar
+  # pelo label guto.managed=true para ver apenas os seu projetos
+  - job_name: "guto_cadvisor"
+    static_configs:
+      - targets: ["cadvisor:8080"]
+        labels:
+          service: "cadvisor"
+          owner: "guto"
+    metric_relabel_configs:
+      # Manter apenas containers com prefixo guto_ para dashboards focados
+      - source_labels: [container_label_guto_managed]
+        regex: "true"
+        action: keep
+      # Fallback: manter também métricas sem label (métricas do próprio cAdvisor)
+      - source_labels: [container_label_guto_managed]
+        regex: ""
+        action: keep
+
+  # === PROJETOS INDIVIDUAIS (adicione conforme criar cada projeto) ===
+  # Descomente e adicione o scrape endpoint se o projeto expor /metrics
+
+  # --- projeto_agendamento (porta 8000) ---
+  # - job_name: "guto_projeto_agendamento"
+  #   static_configs:
+  #     - targets: ["host.docker.internal:8000"]
+  #       labels:
+  #         service: "projeto_agendamento"
+  #         owner: "guto"
+
+  # --- agente_nutricionista (porta 8001) ---
+  # - job_name: "guto_agente_nutricionista"
+  #   static_configs:
+  #     - targets: ["host.docker.internal:8001"]
+  #       labels:
+  #         service: "agente_nutricionista"
+  #         owner: "guto"

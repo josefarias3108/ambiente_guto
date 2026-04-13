@@ -1,0 +1,47 @@
+# ============================================================
+# TEMPLATE: docker-compose.yml — Espaço Guto
+# ============================================================
+# INSTRUÇÃO: Substitua todas as ocorrências de:
+#   <REPO_NAME>  → nome do repositório (ex: agente_nutricionista)
+#   <APP_PORT>   → porta única do projeto (ex: 8001)
+#   <IMAGE_NAME> → nome da imagem (ex: guto_agente_nutricionista)
+# ============================================================
+
+version: "3.9"
+
+services:
+  app:
+    container_name: guto_<REPO_NAME>
+    image: <IMAGE_NAME>:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-<APP_PORT>}:8000"
+    env_file:
+      - .env
+    networks:
+      - guto_<REPO_NAME>_net
+    volumes:
+      - guto_<REPO_NAME>_data:/app/data
+      - guto_<REPO_NAME>_logs:/app/logs
+    labels:
+      - "guto.project=<REPO_NAME>"
+      - "guto.managed=true"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  guto_<REPO_NAME>_net:
+    name: guto_<REPO_NAME>_net
+    driver: bridge
+
+volumes:
+  guto_<REPO_NAME>_data:
+    name: guto_<REPO_NAME>_data
+  guto_<REPO_NAME>_logs:
+    name: guto_<REPO_NAME>_logs
