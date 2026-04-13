@@ -17,10 +17,10 @@ if hasattr(sys.stdout, 'reconfigure'):
 
 import paramiko
 
-# === CREDENCIAIS (lidas do ambiente) ===
-HOST = os.environ.get("VPS_HOST", "194.147.58.150")
+# === CREDENCIAIS (lidas do ambiente ou substitua aqui) ===
+HOST = os.environ.get("VPS_HOST", "0.0.0.0")  # Substitua pelo seu IP
 USER = os.environ.get("VPS_USER", "guto")
-PASS = os.environ.get("VPS_PASS", "Aurora@22")
+PASS = os.environ.get("VPS_PASS", "")          # NUNCA DEIXE A SENHA AQUI
 PORT = int(os.environ.get("VPS_PORT", "22"))
 
 KEY_NAME       = "guto_deploy_key"
